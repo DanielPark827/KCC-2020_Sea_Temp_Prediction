@@ -198,17 +198,18 @@ class MyWindow(QWidget):
         tmp = tmp.fillna(0) #수온만 null인게 아니라 아예 일시 자체가 없어서 null이 되는 경우도 있다
         self.ax.set_ylabel('Water temperature')
         self.ax.set_xlabel('time')
+        self.ax.grid()
 
         if (self.selectedGraphType == 0):
 
             self.ax.plot(df['일시'], df['수온(°C)'])
             self.ax.legend(loc='best')
-            self.ax.grid()
+            # self.ax.grid()
 
             self.canvas.draw()
         elif (self.selectedGraphType == 1):
             # self.ax = self.fig.add_axes([0, 0, 1, 1]) #axes를 추가하는거지만 왠지 모르겠는데 plot 전체에 대한 사이즈가 바뀜 아마 axes의 크기가 기존보다 커져서 plot도 같이 커진게 아닐까
-            self.ax.scatter(df['일시'], df['수온(°C)'], s=1)
+            self.ax.scatter(df['일시'], df['수온(°C)'], s=1,)
             self.ax.scatter(tmp['일시'], tmp['수온(°C)'], s=self.nullMarkerSize)
             self.ax.legend(loc='best')
             self.ax.grid()
@@ -252,7 +253,7 @@ class MyWindow(QWidget):
         self.ax.set_xlabel('time')
 
         self.ax.scatter(df['일시'], df['수온(°C)'], s=1)
-        self.ax.scatter(tmp['일시'], tmp['수온(°C)'], s=self.nullMarkerSize)
+        self.ax.scatter(tmp['일시'], tmp['수온(°C)'], s=self.nullMarkerSize,label="Missing Value")
         self.ax.legend(loc='best')
         self.ax.grid()
 

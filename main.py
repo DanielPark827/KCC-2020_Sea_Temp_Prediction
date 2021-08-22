@@ -1,115 +1,134 @@
-from PyQt5 import QtWidgets
-import os, sys
 import numpy as np
-import pandas as pd
+import pylab as pl
+from numpy import fft
 import matplotlib.pyplot as plt
-from matplotlib import style
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-
-style.use('ggplot')
-
-
-class PrettyWidget(QtWidgets.QWidget):
-
-
-    def __init__(self):
-        super(PrettyWidget, self).__init__()
-        self.initUI()
-
-    def initUI(self):
-        self.setGeometry(600,300, 1000, 600)
-        self.center()
-        self.setWindowTitle('Revision on Plots, Tables and File Browser')
-
-        #Grid Layout
-        grid = QtWidgets.QGridLayout()
-        self.setLayout(grid)
-
-        #Canvas and Toolbar
-        self.figure = plt.figure(figsize=(15,5))
-        self.canvas = FigureCanvas(self.figure)
-        grid.addWidget(self.canvas, 2,0,1,2)
+import pandas as pd
+import numpy as np
+from pandas import Series, DataFrame
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 
-        #Import CSV Button
-        btn1 = QtWidgets.QPushButton('Import CSV', self)
-        btn1.resize(btn1.sizeHint())
-        btn1.clicked.connect(self.getCSV)
-        grid.addWidget(btn1, 1, 0)
-
-        #DropDown mean / comboBox
-
-        self.df = pd.DataFrame()
-        self.rating_list = []
-        self.yq_list = []
-
-        self.comboBox = QtWidgets.QComboBox(self)
-        self.comboBox.addItems(self.rating_list)
-        grid.addWidget(self.comboBox, 0, 0)
-
-        self.comboBox2 = QtWidgets.QComboBox(self)
-        self.comboBox2.addItems(self.yq_list)
-        grid.addWidget(self.comboBox2, 0, 1)
-
-        #Plot Button
-        btn2 = QtWidgets.QPushButton('Plot', self)
-        btn2.resize(btn2.sizeHint())
-        btn2.clicked.connect(self.plot)
-        grid.addWidget(btn2, 1, 1)
-
-        self.show()
+def fourierExtrapolation(x, n_predict, h):
+    n = x.size
+    n_harm = h  # number of harmonics in model
+    t = np.arange(0, n)
+    p = np.polyfit(t, x, 1)  # find linear trend in x
+    x_notrend = x - p[0] * t  # detrended x
 
 
-    def getCSV(self):
-        filePath = QtWidgets.QFileDialog.getOpenFileName(self, 'CSV 열기', './', 'csv(*.csv)')
+    x_freqdom = fft.fft(x_notrend)  # detrended x in frequency domain
 
-        self.df = pd.read_csv(str(filePath))
-        self.rating_list = self.df.rating.unique().tolist()
-        self.yq_list = [str(x) for x in self.df.yq.unique().tolist()]
-        self.comboBox.addItems(self.rating_list)
-        self.comboBox2.addItems(self.yq_list)
+    f = fft.fftfreq(n)  # frequencies
+
+
+    indexes = list(range(n))
+    # sort indexes by frequency, lower -> higher
+    indexes.sort(key=lambda i: np.absolute(f[i]))
+    # indexes.sort(key=lambda i: np.absolute(x_freqdom[i]))
+    # indexes.reverse()
 
 
 
-    def plot(self):
-        y = []
-        for n in range(3):
-            try:
-                y.append(self.table.item(0, n).text())
-            except:
-                y.append(np.nan)
-
-        p1 = self.df.ix[(self.df.rating ==  str(self.comboBox.currentText())) & (self.df.yq ==  int(str(self.comboBox2.currentText()))), :]
-
-
-        plt.cla()
-
-
-        ax = self.figure.add_subplot(111)
-        ax.plot(p1.ix[:, 0], 'g', label = "Pred on data with Model")
-        ax.plot(p1.ix[:, 1], label = "adj Pred to non-decreasing")
-        ax.plot(p1.ix[:, 3], label = "Fitting value in Model")
-        ax.plot(p1.ix[:, 2], 'r', label = "Actual PD")
-        ax.plot(p1.ix[:, 4], 'y', label = "Long Run Avg")
-
-        ax.set_title('Canada C&I PD Plot')
-        ax.legend(loc = 0)
-        self.canvas.draw()
-
-
-    def center(self):
-        qr = self.frameGeometry()
-        cp = QtWidgets.QDesktopWidget().availableGeometry().center()
-        qr.moveCenter(cp)
-        self.move(qr.topLeft())
-
+    t = np.arange(0, n + n_predict)
+    restored_sig = np.zeros(t.size)
+    for i in indexes[:1 + n_harm * 2]:
+        ampli = np.absolute(x_freqdom[i]) / n  # amplitude
+        phase = np.angle(x_freqdom[i])  # phase
+        restored_sig += ampli * np.cos(2 * np.pi * f[i] * t + phase)
+    return restored_sig + p[0] * t
 
 
 def main():
-    app = QtWidgets.QApplication(sys.argv)
-    w = PrettyWidget()
-    app.exec_()
+
+    pointCsvList = ['output/955.csv', 'outputput/957.csv', 'output/956.csv', 'out/958.csv',
+                    'output/959.csv',  'output/960.csv', 'output/961.csv', 'output/962.csv',
+                         'output/963.csv', 'output/21229.csv', 'output/22101.csv', 'output/22102.csv',
+                         'output/22103.csv', 'output/22104.csv', 'output/22105.csv', 'output/22106.csv',
+                         'output/22107.csv', 'output/22108.csv', 'output/22183.csv', 'output/22184.csv',
+                         'output/22185.csv', 'output/22186.csv', 'output/22187.csv', 'output/22188.csv',
+                         'output/22189.csv', 'output/22190.csv', 'output/22191.csv', 'output/22192.csv',
+                         'output/22193.csv', 'output/22194.csv', 'output/22297.csv', 'output/22298.csv',
+                         'output/22441.csv', 'output/22442.csv', 'output/22443.csv', 'output/22444.csv',
+                         'output/22445.csv', 'output/22446.csv', 'output/22447.csv', 'output/22448.csv',
+                         'output/22449.csv', 'output/22450.csv', 'output/22451.csv', 'output/22452.csv',
+                         'output/22453.csv', 'output/22454.csv', 'output/22455.csv', 'output/22456.csv',
+                         'output/22457.csv', 'output/22458.csv', 'output/22459.csv', 'output/22460.csv',
+                         'output/22461.csv', 'output/22462.csv', 'output/22464.csv',
+                         'output/22465.csv', 'output/22466.csv', 'output/22467.csv', 'output/22468.csv',
+                         'output/22469.csv', 'output/22470.csv', 'output/22471.csv', 'output/22472.csv',
+                         'output/22473.csv', 'output/22474.csv', 'output/22475.csv', 'output/22476.csv',
+                         'output/22477.csv', 'output/22478.csv', 'output/22479.csv', 'output/22483.csv',
+                         'output/22484.csv', 'output/22485.csv', 'output/22486.csv', 'output/22487.csv',
+                         'output/22489.csv', 'output/22490.csv', 'output/22491.csv', 'output/22492.csv',
+                         'output/22493.csv', 'output/22494.csv', 'output/22495.csv', 'output/22496.csv',
+                         'output/22497.csv', 'output/22498.csv', 'output/22499.csv', 'output/22500.csv',
+                         'output/22501.csv', 'output/22502.csv', 'output/22503.csv', 'output/22504.csv',
+                         'output/22505.csv', 'output/22507.csv', 'output/22509.csv',
+                         'output/22601.csv', 'output/22602.csv', ]
+
+    selectedData = pointCsvList[0]  # 맨 처음 데이터를 기본값으로
+    df = pd.read_csv(fr'{selectedData}', encoding='cp949')
+    # df = df[(df["지점"] == 22101)]
+    x = df["수온(°C)"].to_numpy()
+    x = x[np.logical_not(np.isnan(x))]
+    df["일시"] = pd.to_datetime(df["일시"])
+
+    df = df[(df["지점"] == 22205)]
+    tmp = df[['수온(°C)']]
+    tmp = df[tmp.isnull().any(axis=1)]
+    tmp = tmp.fillna(0)
+    n_predict = 0
+    h = 100
+
+    sliced_x = np.copy(x)
+    sliced_x = sliced_x[:58120]
+
+    iter= (len(sliced_x)-1) // 2
+
+    mse_arr = np.array([])
+    rmse_arr = np.array([])
+    mae_arr = np.array([])
+
+    for i in range(iter):
+        extrapolation = fourierExtrapolation(sliced_x, 24907, i)
+
+        mse_arr = np.append(mse_arr, mean_squared_error(x, extrapolation))
+        rmse_arr = np.append(rmse_arr, np.sqrt(mean_squared_error(x, extrapolation)))
+        mae_arr = np.append(mae_arr, mean_absolute_error(x, extrapolation))
+
+    plt.cla()
+    plt.plot(np.arange(len(mse_arr)),mse_arr)
+    plt.title("MSE")
+    plt.savefig("mse.png")
+
+    plt.cla()
+    plt.plot(np.arange(len(rmse_arr)), rmse_arr)
+    plt.title("rmse")
+    plt.savefig("rmse.png")
+
+    plt.cla()
+    plt.plot(np.arange(len(mae_arr)), mae_arr)
+    plt.title("mae")
+    plt.savefig("mae.png")
 
 
-if __name__ == '__main__':
+    pl.plot(np.arange(0, x.size), x, 'b', label='x', linewidth=1)
+    start = 20000
+    end = 40000
+    # pl.plot(np.arange(0, start), x[:start], 'b',  linewidth=1)
+    # pl.plot(np.arange(end, x.size), x[end:], 'b', label='x', linewidth=1)
+    # print("mse : "+str(mean_squared_error(x[start:end], extrapolation[start:end])))
+    # print("rmse : " + str(np.sqrt(mean_squared_error(x[start:end], extrapolation[start:end]))))
+    # print("mae : "+str(mean_absolute_error(x[start:end], extrapolation[start:end])))
+
+    pl.plot(np.arange(0, extrapolation.size), extrapolation, 'r', label='Prediction', linewidth=1.5)
+    # print("mse : " + str(mean_squared_error(x, extrapolation)))
+    # print("rmse : " + str(np.sqrt(mean_squared_error(x, extrapolation))))
+    # print("mae : " + str(mean_absolute_error(x, extrapolation)))
+    pl.legend()
+    pl.show()
+
+
+if __name__ == "__main__":
     main()
